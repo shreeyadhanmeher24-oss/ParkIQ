@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parking Timer - ParkIQ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="search-container">
+    <h1>Parking Active</h1>
+
+    <div class="timer-card">
+        <h2>Your Parking Timer</h2>
+        <h1 id="countdown">{{ seconds }}</h1>
+        <p>Your vehicle is safely parked.</p>
+
+        <br>
+
+        <!-- Back Home Button -->
+        <a href="/">
+            <button class="home-btn">Back Home</button>
+        </a>
+    </div>
+</div>
+
+<script>
+let timeLeft = Number("{{ seconds }}");
+
+function updateTimer() {
+    let minutes = Math.floor(timeLeft / 60);
+    let seconds = timeLeft % 60;
+
+    document.getElementById("countdown").innerText =
+        minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+    if(timeLeft <= 0){
+        fetch("/send_expiry_sms");
+
+        alert("Your parking time is over. Please extend parking.");
+        window.location.href = "/extend_payment";
+        return;
+    }
+
+    timeLeft--;
+}
+
+setInterval(updateTimer, 1000);
+updateTimer();
+</script>
+
+</body>
+</html>

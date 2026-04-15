@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Payment - ParkIQ</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+<div class="payment-container">
+    <div class="payment-card">
+        <h1>💳 Secure Payment</h1>
+        <p>Parking Slot Booking Fee</p>
+        <h2>₹50</h2>
+
+        <button id="rzp-button">Pay Now</button>
+    </div>
+</div>
+
+<script>
+console.log("Razorpay Key:", "rzp_test_SdKPQQ7qGLvELC");
+
+var options = {
+    key: "rzp_test_SdKPQQ7qGLvELC",
+    amount: "{{ amount }}",
+    currency: "INR",
+    name: "ParkIQ",
+    description: "Parking Slot Payment",
+    order_id: "{{ order_id }}",
+
+    handler: function(response){
+        window.location.href = "/success?payment_id=" + response.razorpay_payment_id;
+    },
+
+    theme: {
+        color: "#22c55e"
+    }
+};
+
+var rzp1 = new Razorpay(options);
+
+document.getElementById("rzp-button").onclick = function(e){
+    rzp1.open();
+    e.preventDefault();
+}
+</script>
+
+</body>
+</html>

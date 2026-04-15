@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Area Slots - ParkIQ</title>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+#map {
+height: 500px;
+width: 100%;
+margin-top: 30px;
+border-radius: 20px;
+overflow: hidden;
+}
+</style>
+</head>
+
+<body>
+
+<div class="search-container">
+    <h1>{{ area }}</h1>
+
+    <p>Total Slots: {{ total }}</p>
+    <p>Available Slots: {{ available }}</p>
+    <p>Occupied Slots: {{ occupied }}</p>
+
+    <div class="prediction-box">
+        AI Prediction: {{ prediction }}
+    </div>
+
+    <div id="map"></div>
+
+    <br>
+
+    {% if available > 0 %}
+        <a href="/book/1">
+            <button>Book Now</button>
+        </a>
+    {% else %}
+        <button disabled>No Slots Available</button>
+    {% endif %}
+
+    <br><br>
+
+    <a href="/search_location">
+        <button>Back</button>
+    </a>
+</div>
+
+<script>
+window.onload = function () {
+
+    var map = L.map('map');
+
+    // Default Mumbai view
+    map.setView([19.0760, 72.8777], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Parking location marker
+    var parkingLat = 19.0760;
+    var parkingLon = 72.8777;
+
+    L.marker([parkingLat, parkingLon]).addTo(map)
+        .bindPopup("Parking Available Here")
+        .openPopup();
+
+    // User GPS location
+    navigator.geolocation.getCurrentPosition(function(position) {
+
+        let userLat = position.coords.latitude;
+        let userLon = position.coords.longitude;
+
+        L.marker([userLat, userLon]).addTo(map)
+            .bindPopup("You are here")
+            .openPopup();
+
+        map.setView([userLat, userLon], 14);
+
+        // redraw properly
+        setTimeout(function () {
+            map.invalidateSize();
+        }, 500);
+
+    });
+
+    // backup redraw
+    setTimeout(function () {
+        map.invalidateSize();
+    }, 1000);
+};
+</script>
+
+</body>
+</html>

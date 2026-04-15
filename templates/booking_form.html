@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Parking - ParkIQ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="search-container">
+    <h1>Book Your Parking Slot</h1>
+
+    <form action="/confirm_booking" method="POST">
+
+        <label>Vehicle Number Plate:</label><br>
+        <input type="text" name="vehicle_number" required><br><br>
+
+        <label>Vehicle Type:</label><br>
+        <select name="vehicle_type" id="vehicle_type" onchange="calculatePrice()" required>
+            <option value="">Select Vehicle Type</option>
+            <option value="2">2 Wheeler</option>
+            <option value="4">4 Wheeler</option>
+        </select><br><br>
+
+        <label>Parking Duration:</label><br>
+        <select name="duration" id="duration" onchange="calculatePrice()" required>
+            <option value="">Select Duration</option>
+            <option value="1">30 Minutes</option>
+            <option value="2">1 Hour</option>
+            <option value="4">2 Hours</option>
+            <option value="6">3 Hours</option>
+        </select><br><br>
+
+        <h2 id="priceDisplay">Price: ₹0</h2>
+
+        <input type="hidden" name="price" id="priceInput">
+
+        <button type="submit">Continue to Payment</button>
+    </form>
+</div>
+
+<script>
+function calculatePrice() {
+    let vehicleType = document.getElementById("vehicle_type").value;
+    let duration = document.getElementById("duration").value;
+
+    let price = 0;
+
+    if(vehicleType && duration){
+        if(vehicleType == "2"){
+            price = duration * 10;
+        } else if(vehicleType == "4"){
+            price = duration * 20;
+        }
+    }
+
+    document.getElementById("priceDisplay").innerText = "Price: ₹" + price;
+    document.getElementById("priceInput").value = price;
+}
+</script>
+
+</body>
+</html>

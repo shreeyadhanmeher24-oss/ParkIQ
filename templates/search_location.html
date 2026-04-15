@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find Parking - ParkIQ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="search-container">
+    <h1>Find Parking Near You</h1>
+
+    <div class="autocomplete-box">
+        <input type="text" id="locationInput" placeholder="Enter Area Name">
+        <div id="suggestions"></div>
+    </div>
+
+    <br>
+
+    <button onclick="searchSelectedLocation()">Search Parking</button>
+
+    <br><br>
+
+    <button onclick="getLocation()">Use My GPS Location</button>
+</div>
+
+<script>
+let selectedLocation = "";
+
+// LIVE SEARCH AUTOCOMPLETE
+document.getElementById("locationInput").addEventListener("input", function() {
+    let query = this.value.trim();
+
+    if(query.length < 2) {
+        document.getElementById("suggestions").innerHTML = "";
+        return;
+    }
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+    .then(response => response.json())
+    .then(data => {
+        let suggestionsHTML = "";
+
+        data.slice(0,5).forEach(place => {
+            suggestionsHTML += `
+                <div class="suggestion-item" onclick="selectLocation('${place.display_name.replace(/'/g, "\\'")}')">
+                    ${place.display_name}
+                </div>
+            `;
+        });
+
+        document.getElementById("suggestions").innerHTML = suggestionsHTML;
+    })
+    .catch(error => {
+        console.log("Search error:", error);
+    });
+});
+
+// SELECT LOCATION
+function selectLocation(location) {
+    selectedLocation = location;
+    document.getElementById("locationInput").value = location;
+    document.getElementById("suggestions").innerHTML = "";
+}
+
+// SEARCH BUTTON
+function searchSelectedLocation() {
+    let inputValue = document.getElementById("locationInput").value.trim();
+
+    if(inputValue === "") {
+        alert("Please enter a location.");
+        return;
+    }
+
+    window.location.href = "/area_slots?location=" + encodeURIComponent(inputValue);
+}
+
+// GPS LOCATION
+function getLocation() {
+    navigator.geolocation.getCurrentPosition(function(position) {
+        let lat = position.coords.latitude;
+        let lon = position.coords.longitude;
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+        .then(response => response.json())
+        .then(data => {
+            selectedLocation = data.display_name;
+            document.getElementById("locationInput").value = selectedLocation;
+        })
+        .catch(error => {
+            console.log("GPS error:", error);
+        });
+    });
+}
+</script>
+
+</body>
+</html>

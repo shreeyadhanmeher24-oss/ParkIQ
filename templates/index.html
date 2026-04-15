@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkIQ - Smart Parking System</title>
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Custom JS -->
+    <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="logo"> ParkIQ</div>
+
+    <div class="menu-toggle" id="menu-toggle">
+        ☰
+    </div>
+
+    <ul class="nav-links" id="nav-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#slots">Parking Slots</a></li>
+        <li><a href="#reviews">Reviews</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="/history">My Bookings</a></li>
+        
+
+        {% if username %}
+            <li><a href="/dashboard">Hi, {{ username }}</a></li>
+            <li><a href="/logout">Logout</a></li>
+        {% else %}
+            <li><a href="/login">Login</a></li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero" id="home">
+    <div class="hero-content">
+        <h1>Find Smart Parking Near You Instantly</h1>
+        <p>Book parking slots in real-time with GPS tracking and secure payment.</p>
+
+<a href="/search_location"><button>Find Parking Near Me</button></a>
+        
+        <a href="#map-section"><button class="secondary-btn">View Map</button></a>
+    </div>
+</section>
+
+<!-- About -->
+<section class="about reveal" id="about">
+    <h2>About ParkIQ</h2>
+    <p>
+        ParkIQ is an intelligent smart parking allocation system designed to help users
+        locate nearby parking slots instantly, reserve them, and make secure payments.
+    </p>
+</section>
+
+<!-- Features -->
+<section class="features reveal" id="features">
+    <h2>Our Features</h2>
+
+    <div class="feature-cards">
+
+        <div class="card">
+            <h3>📍 Live GPS Tracking</h3>
+            <p>Locate nearby parking spaces using real-time GPS.</p>
+        </div>
+
+        <div class="card">
+            <h3>💳 Secure Payments</h3>
+            <p>Pay safely through integrated online payment system.</p>
+        </div>
+
+        <div class="card">
+            <h3>🚘 Instant Booking</h3>
+            <p>Reserve parking slots instantly with one click.</p>
+        </div>
+
+        <div class="card">
+            <h3>📊 Live Availability</h3>
+            <p>Monitor available and occupied slots in real-time.</p>
+        </div>
+
+    </div>
+</section>
+
+<!-- Parking Slots -->
+<section class="slots reveal" id="slots">
+    <h2>Live Parking Slots</h2>
+
+    <div class="slot-grid">
+        {% for slot in parking_slots %}
+        <div class="slot-card {{ slot[2].lower() }}">
+
+            <h3>{{ slot[1] }}</h3>
+            <p>{{ slot[2] }}</p>
+
+            {% if slot[2] == "Available" %}
+                <a href="/book/{{ slot[0] }}">
+                    <button>Book Slot</button>
+                </a>
+            {% else %}
+                <button disabled>Occupied</button>
+            {% endif %}
+
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Map -->
+<section class="map-section reveal" id="map-section">
+    <h2>GPS Parking Locator</h2>
+    <div id="map"></div>
+</section>
+
+<!-- Reviews -->
+<section class="reviews reveal" id="reviews">
+    <h2>What Our Users Say</h2>
+
+    <div class="review-cards">
+        {% for review in reviews %}
+        <div class="review-card">
+            <p>"{{ review.review }}"</p>
+            <h4>— {{ review.name }}</h4>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Footer -->
+<footer id="contact">
+    <p>📧 support@parkiq.com | 📞 +91 9876543210</p>
+
+    <div class="social-icons">
+        <span>🌐</span>
+        <span>📘</span>
+        <span>📷</span>
+        <span>🐦</span>
+    </div>
+
+    <p>© 2026 ParkIQ Smart Parking System. All Rights Reserved.</p>
+</footer>
+
+</body>
+</html>

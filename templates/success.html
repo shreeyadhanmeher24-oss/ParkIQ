@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Successful - ParkIQ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="success-container">
+
+    <div class="success-card">
+
+        <div class="checkmark">✅</div>
+
+        <h1>Payment Successful!</h1>
+
+        <p>Your parking slot has been booked successfully.</p>
+
+        <h3>Payment ID:</h3>
+        <p class="payment-id">{{ payment_id }}</p>
+
+        <a href="/download_receipt/{{ payment_id }}">
+            <button>Download Receipt PDF</button>
+        </a>
+
+        <br><br>
+
+        <a href="/">
+            <button class="home-btn">Back Home</button>
+        </a>
+
+        <br>
+
+    </div>
+
+</div>
+
+</body>
+</html>

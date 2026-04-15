@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ParkIQ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="auth-container">
+    <form class="auth-form" method="POST">
+        <h2>Login to ParkIQ</h2>
+
+        <input type="text" name="username" placeholder="Enter Username" required>
+        <input type="password" name="password" placeholder="Enter Password" required>
+
+        <button type="submit">Login</button>
+
+        <p>Don't have an account? <a href="/register">Register</a></p>
+    </form>
+</div>
+
+</body>
+</html>
