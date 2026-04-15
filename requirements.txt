@@ -1,0 +1,4 @@
+flask
+razorpay
+reportlab
+requests
