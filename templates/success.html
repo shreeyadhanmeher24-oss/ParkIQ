@@ -9,7 +9,6 @@
 <body>
 
 <div class="success-container">
-
     <div class="success-card">
 
         <div class="checkmark">✅</div>
@@ -21,21 +20,30 @@
         <h3>Payment ID:</h3>
         <p class="payment-id">{{ payment_id }}</p>
 
+        <!-- Download Receipt Button -->
         <a href="/download_receipt/{{ payment_id }}">
-            <button>Download Receipt PDF</button>
+            <button class="receipt-btn">Download Receipt PDF</button>
         </a>
 
         <br><br>
 
+        
+
+        <br><br>
+
+        <!-- Back Home Button -->
         <a href="/">
             <button class="home-btn">Back Home</button>
         </a>
 
-        <br>
-
     </div>
-
 </div>
+
+<script>
+setTimeout(function(){
+    window.location.href = "/timer";
+}, 2000);
+</script>
 
 </body>
 </html>

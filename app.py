@@ -212,6 +212,7 @@ def extend_payment():
 
 
 # ---------------- PAYMENT SUCCESS ----------------
+# ---------------- PAYMENT SUCCESS ----------------
 @app.route("/success")
 def success():
     payment_id = request.args.get("payment_id")
@@ -229,9 +230,18 @@ def success():
     conn.commit()
     conn.close()
 
+    # Save payment id for receipt + timer flow
+    session["last_payment_id"] = payment_id
+
+    # SHOW SUCCESS PAGE FIRST (not timer directly)
+    return render_template("success.html", payment_id=payment_id)
+
+
+# ---------------- TIMER PAGE ----------------
+@app.route("/timer")
+def timer():
     duration_units = int(session.get("duration", 1))
     seconds = duration_units * 30 * 60
-
     return render_template("timer.html", seconds=seconds)
 
 
