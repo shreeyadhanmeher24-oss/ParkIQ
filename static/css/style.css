@@ -889,3 +889,90 @@ text-align: center;
 .about-card:hover {
     transform: translateY(-5px);
 }
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* NAVBAR */
+.navbar {
+    background: #0A2540;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-links a {
+    color: white;
+    margin: 10px;
+    text-decoration: none;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.wallet {
+    background: #00c896;
+    padding: 6px 12px;
+    border-radius: 20px;
+    margin-right: 10px;
+}
+
+/* CONTENT */
+.main-content {
+    padding: 20px;
+}
+
+.wallet-card {
+    background: #0A2540;
+    color: white;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.wallet-card .amount {
+    font-size: 28px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.wallet-card {
+    background: #ffffff;
+    color: #1a1a1a;
+    padding: 25px;
+    margin: 25px auto;
+    border-radius: 16px;
+    text-align: center;
+    width: 320px;
+
+    /* Soft modern shadow */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+
+    /* subtle border */
+    border: 1px solid #f0f0f0;
+
+    transition: transform 0.2s ease;
+}
+
+.wallet-card:hover {
+    transform: translateY(-5px);
+}
+
+.wallet-card h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.wallet-card .amount {
+    font-size: 32px;
+    font-weight: bold;
+    color: #2ecc71; /* green = money */
+}

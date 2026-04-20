@@ -12,7 +12,24 @@
     <h1>Welcome, {{ username }} 👋</h1>
     <p>Your smart parking dashboard is ready.</p>
 
+    <!-- WALLET DISPLAY -->
+    <div class="wallet-card">
+        <h2>💰 Wallet Balance</h2>
+        <p class="amount">₹{{ wallet }}</p>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <a href="/add_money"><button>Add Money</button></a>
+
+    <!-- ✅ PASS LOGIC -->
+    {% if has_pass %}
+        <a href="/view_pass"><button>View My Pass</button></a>
+    {% else %}
+        <a href="/buy_pass"><button>Buy Pass</button></a>
+    {% endif %}
+
     <a href="/"><button>Go to Home</button></a>
+    <a href="/history"><button>My Bookings</button></a>
     <a href="/logout"><button class="logout-btn">Logout</button></a>
 </div>
 

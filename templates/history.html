@@ -15,6 +15,11 @@
     <div class="history-card">
         <p><strong>Slot:</strong> {{ booking[0] }}</p>
         <p><strong>Payment ID:</strong> {{ booking[1] }}</p>
+
+        <!-- ✅ NEW: DATE & TIME -->
+        <p><strong>Date:</strong> {{ booking[2] if booking|length > 2 else "-" }}</p>
+        <p><strong>Time:</strong> {{ booking[3] if booking|length > 3 else "-" }}</p>
+
     </div>
     {% endfor %}
 

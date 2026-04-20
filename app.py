@@ -9,6 +9,28 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = "parkiq_secret_key"
 
+
+@app.context_processor
+def inject_wallet():
+    try:
+        user = session.get("username")
+
+        if user:
+            conn = sqlite3.connect("parking.db")
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT wallet FROM users WHERE username=?", (user,))
+            data = cursor.fetchone()
+            conn.close()
+
+            return dict(wallet=data[0] if data else 0)
+
+    except:
+        pass
+
+    return dict(wallet=None)
+
+
 # Razorpay Client
 client = razorpay.Client(
     auth=("rzp_test_SdKPQQ7qGLvELC", "CbrtZnClD3T2ugYDnqd68H0l")
@@ -19,8 +41,20 @@ client = razorpay.Client(
 def home():
     conn = sqlite3.connect("parking.db")
     cursor = conn.cursor()
+
     cursor.execute("SELECT * FROM parking_slots")
     parking_slots = cursor.fetchall()
+
+    username = session.get("username")
+
+    # ✅ GET WALLET BALANCE
+    wallet = 0
+    if username:
+        cursor.execute("SELECT wallet FROM users WHERE username=?", (username,))
+        result = cursor.fetchone()
+        if result:
+            wallet = result[0]
+
     conn.close()
 
     reviews = [
@@ -29,13 +63,12 @@ def home():
         {"name": "Aman Verma", "review": "Best parking solution in crowded areas."}
     ]
 
-    username = session.get("username")
-
     return render_template(
         "index.html",
         parking_slots=parking_slots,
         reviews=reviews,
-        username=username
+        username=username,
+        wallet=wallet   # ✅ PASS TO HTML
     )
 
 
@@ -49,9 +82,9 @@ def register():
         conn = sqlite3.connect("parking.db")
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            (username, password)
-        )
+    "INSERT INTO users (username, password, wallet) VALUES (?, ?, ?)",
+    (username, password, 0)
+)
         conn.commit()
         conn.close()
 
@@ -91,15 +124,46 @@ def logout():
 
 
 # ---------------- DASHBOARD ----------------
+from datetime import datetime
+
 @app.route("/dashboard")
 def dashboard():
     if "username" not in session:
         return redirect(url_for("login"))
 
-    username = session["username"]
-    return render_template("dashboard.html", username=username)
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
 
+    cursor.execute(
+        "SELECT wallet, pass_expiry FROM users WHERE username=?",
+        (session["username"],)
+    )
 
+    data = cursor.fetchone()
+    conn.close()
+
+    # ✅ Safe handling (important)
+    wallet = data[0] if data and data[0] else 0
+    pass_expiry = data[1] if data else None
+
+    has_pass = False
+
+    if pass_expiry:
+        try:
+            expiry_date = datetime.strptime(pass_expiry, "%Y-%m-%d")
+            if expiry_date >= datetime.now():
+                has_pass = True
+        except:
+            has_pass = False
+
+    return render_template(
+        "dashboard.html",
+        username=session["username"],
+        wallet=wallet,
+        has_pass=has_pass
+    )
+
+   
 # ---------------- SEARCH LOCATION ----------------
 @app.route("/search_location")
 def search_location():
@@ -172,19 +236,66 @@ def booking_form():
 
 
 # ---------------- CONFIRM BOOKING ----------------
+from datetime import datetime
+import random
+
 @app.route("/confirm_booking", methods=["POST"])
 def confirm_booking():
     vehicle_number = request.form["vehicle_number"]
     vehicle_type = request.form["vehicle_type"]
     duration = request.form["duration"]
-    price = request.form["price"]
+    price = int(request.form["price"])
 
+    username = session.get("username")
+
+    # SAVE SESSION
     session["vehicle_number"] = vehicle_number
     session["vehicle_type"] = vehicle_type
     session["duration"] = duration
-    session["payment_amount"] = int(price) * 100
+    session["payment_amount"] = price * 100
 
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
+
+    # 🔍 CHECK PASS
+    cursor.execute("SELECT pass_expiry, wallet FROM users WHERE username=?", (username,))
+    result = cursor.fetchone()
+
+    if result and result[0]:
+        try:
+            expiry_date = datetime.strptime(result[0], "%Y-%m-%d")
+
+            # ✅ PASS USER
+            if expiry_date >= datetime.now():
+                wallet = result[1]
+
+                # 💰 CHECK WALLET
+                if wallet >= price:
+                    new_balance = wallet - price
+
+                    cursor.execute(
+                        "UPDATE users SET wallet=? WHERE username=?",
+                        (new_balance, username)
+                    )
+
+                    conn.commit()
+                    conn.close()
+
+                    session["last_payment_id"] = "PASS_" + str(random.randint(1000, 9999))
+                    return redirect("/success")
+
+                else:
+                    conn.close()
+                    return "❌ Not enough balance in wallet"
+
+        except:
+            pass
+
+    conn.close()
+
+    # ❌ NON-PASS USER → RAZORPAY
     return redirect("/payment")
+
 
 
 # ---------------- PAYMENT ----------------
@@ -212,10 +323,9 @@ def extend_payment():
 
 
 # ---------------- PAYMENT SUCCESS ----------------
-# ---------------- PAYMENT SUCCESS ----------------
 @app.route("/success")
 def success():
-    payment_id = request.args.get("payment_id")
+    payment_id = request.args.get("payment_id") or session.get("last_payment_id")
     slot_number = session.get("booked_slot")
     username = session.get("username")
 
@@ -223,9 +333,15 @@ def success():
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO bookings (username, slot_number, payment_id) VALUES (?, ?, ?)",
-        (username, slot_number, payment_id)
+    "INSERT INTO bookings (username, slot_number, payment_id, date, time) VALUES (?, ?, ?, ?, ?)",
+    (
+        session.get("username"),
+        session.get("booked_slot"),
+        payment_id,
+        session.get("date"),
+        session.get("time")
     )
+)
 
     conn.commit()
     conn.close()
@@ -245,6 +361,7 @@ def timer():
     return render_template("timer.html", seconds=seconds)
 
 
+
 # ---------------- DOWNLOAD RECEIPT ----------------
 @app.route("/download_receipt/<payment_id>")
 def download_receipt(payment_id):
@@ -259,10 +376,15 @@ def download_receipt(payment_id):
     p.drawString(100, 710, f"Amount Paid: ₹{session.get('payment_amount',5000)//100}")
     p.drawString(100, 680, f"Vehicle Number: {session.get('vehicle_number','-')}")
     p.drawString(100, 650, f"Vehicle Type: {session.get('vehicle_type','-')}-Wheeler")
-    p.drawString(100, 620, f"Duration: {session.get('duration','-')}")
-    p.drawString(100, 590, "Parking Slot Booking Confirmed")
-    p.drawString(100, 560, "Status: Successful")
-    p.drawString(100, 520, "Thank you for using ParkIQ!")
+
+    # ✅ NEW: DATE & TIME (AUTO)
+    p.drawString(100, 620, f"Date: {session.get('date','-')}")
+    p.drawString(100, 590, f"Time: {session.get('time','-')}")
+
+    p.drawString(100, 560, f"Duration: {session.get('duration','-')}")
+    p.drawString(100, 530, "Parking Slot Booking Confirmed")
+    p.drawString(100, 500, "Status: Successful")
+    p.drawString(100, 460, "Thank you for using ParkIQ!")
 
     p.save()
     buffer.seek(0)
@@ -274,6 +396,7 @@ def download_receipt(payment_id):
         mimetype="application/pdf"
     )
 
+    
 
 # ---------------- BOOKING HISTORY ----------------
 @app.route("/history")
@@ -283,8 +406,9 @@ def history():
     conn = sqlite3.connect("parking.db")
     cursor = conn.cursor()
 
+    # ✅ Fetch slot, payment, date & time
     cursor.execute(
-        "SELECT slot_number, payment_id FROM bookings WHERE username=?",
+        "SELECT slot_number, payment_id, date, time FROM bookings WHERE username=?",
         (username,)
     )
 
@@ -354,6 +478,203 @@ def admin():
     conn.close()
 
     return render_template("admin.html", slots=slots)
+
+# ---------------- ADD MONEY ----------------
+
+@app.route("/add_money", methods=["GET", "POST"])
+def add_money():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        amount = int(request.form["amount"])
+
+        conn = sqlite3.connect("parking.db")
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "UPDATE users SET wallet = wallet + ? WHERE username=?",
+            (amount, session["username"])
+        )
+
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("dashboard"))
+
+    return render_template("add_money.html")
+
+# BUY PASS
+@app.route("/buy_pass")
+def buy_pass():
+    from datetime import datetime
+
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT pass_expiry FROM users WHERE username=?",
+        (session["username"],)
+    )
+    result = cursor.fetchone()
+
+    conn.close()
+
+    print("DEBUG PASS:", result)   # 👈 IMPORTANT (check terminal)
+
+    # ✅ IF NO PASS → SHOW FORM
+    if not result or result[0] is None:
+        return render_template("buy_pass.html")
+
+    # ✅ CHECK DATE
+    try:
+        expiry_date = datetime.strptime(result[0], "%Y-%m-%d")
+
+        if expiry_date >= datetime.now():
+            return f"""
+            <h2>✅ Pass Active Till {result[0]}</h2>
+            <a href='/view_pass'>View Pass</a>
+            """
+
+    except:
+        return render_template("buy_pass.html")
+
+    # ✅ EXPIRED → SHOW FORM
+    return render_template("buy_pass.html")
+  
+# PASS PAYMENT
+
+@app.route("/create_pass_payment", methods=["POST"])
+def create_pass_payment():
+    from datetime import datetime
+
+    username = session.get("username")
+
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT pass_expiry FROM users WHERE username=?",
+        (username,)
+    )
+    result = cursor.fetchone()
+
+    # ✅ CHECK IF PASS ALREADY ACTIVE
+    if result and result[0]:
+        try:
+            expiry_date = datetime.strptime(result[0], "%Y-%m-%d")
+
+            if expiry_date >= datetime.now():
+                conn.close()
+                return f"""
+                <h2>⚠️ You already have an active pass till {result[0]}</h2>
+                <a href='/view_pass'>View Pass</a>
+                """
+        except:
+            pass
+
+    conn.close()
+
+    # CONTINUE NORMAL PAYMENT
+    vehicle_number = request.form["vehicle_number"]
+    vehicle_type = request.form["vehicle_type"]
+
+    session["pass_vehicle"] = vehicle_number
+    session["pass_type"] = vehicle_type
+
+    amount = 50000
+
+    order = client.order.create({
+        "amount": amount,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    return render_template(
+        "pass_payment.html",
+        order_id=order["id"],
+        amount=amount,
+        key_id="rzp_test_SdKPQQ7qGLvELC"
+    )
+
+# PASS ACTIVATE 
+
+@app.route("/pass_success")
+def pass_success():
+    import datetime
+
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    user = session.get("username")
+
+    start_date = datetime.datetime.now()
+    expiry_date = start_date + datetime.timedelta(days=30)
+
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
+
+    # ✅ ADD ₹500 TO WALLET
+    cursor.execute("UPDATE users SET wallet = wallet + 500 WHERE username=?", (user,))
+
+    # ✅ STORE PASS ALSO (optional)
+    cursor.execute("""
+        UPDATE users 
+        SET pass_expiry=?, vehicle_number=?, vehicle_type=? 
+        WHERE username=?
+    """, (
+        expiry_date.strftime("%Y-%m-%d"),
+        session.get("pass_vehicle"),
+        session.get("pass_type"),
+        user
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return render_template("pass_success.html", expiry=expiry_date.strftime("%Y-%m-%d"))
+# VIEW PASS 
+@app.route("/view_pass")
+def view_pass():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    conn = sqlite3.connect("parking.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT vehicle_number, vehicle_type, pass_expiry 
+        FROM users WHERE username=?
+    """, (session["username"],))
+
+    data = cursor.fetchone()
+    conn.close()
+
+    if not data:
+        return "No pass found"
+
+    vehicle_number, vehicle_type, expiry = data
+
+    # check status
+    from datetime import datetime
+    status = "Active"
+    if expiry:
+        if datetime.strptime(expiry, "%Y-%m-%d") < datetime.now():
+            status = "Expired"
+
+    return render_template(
+        "view_pass.html",
+        username=session["username"],
+        vehicle_number=vehicle_number,
+        vehicle_type=vehicle_type,
+        expiry=expiry,
+        status=status
+    )
+
+
 
 
 # ---------------- RUN APP ----------------

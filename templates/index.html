@@ -38,11 +38,18 @@
         
 
         {% if username %}
-            <li><a href="/dashboard">Hi, {{ username }}</a></li>
-            <li><a href="/logout">Logout</a></li>
-        {% else %}
-            <li><a href="/login">Login</a></li>
-        {% endif %}
+    <li><a href="/dashboard">Hi, {{ username }}</a></li>
+
+    <!-- 💰 WALLET -->
+    <li style="color:#00ffcc; font-weight:bold;">
+        💰 ₹{{ wallet }}
+    </li>
+
+    <li><a href="/logout">Logout</a></li>
+
+{% else %}
+    <li><a href="/login">Login</a></li>
+{% endif %}
     </ul>
 </nav>
 

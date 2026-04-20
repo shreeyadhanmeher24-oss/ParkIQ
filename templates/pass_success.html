@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pass Activated - ParkIQ</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #e6f0ff, #f4f6f8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    width: 380px;
+}
+
+.icon {
+    font-size: 60px;
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+h2 {
+    margin-bottom: 10px;
+}
+
+p {
+    color: #555;
+}
+
+.btn {
+    margin-top: 20px;
+    display: inline-block;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+    background: #28a745;
+    font-size: 15px;
+}
+
+.btn:hover {
+    background: #218838;
+}
+
+.secondary {
+    background: #6c757d;
+}
+
+.secondary:hover {
+    background: #5a6268;
+}
+</style>
+
+</head>
+<body>
+
+<div class="card">
+    <div class="icon">✔</div>
+
+    <h2>Pass Activated!</h2>
+    <p>Your monthly parking pass is now active 🎉</p>
+
+    <p><strong>Valid Till:</strong> {{ expiry }}</p>
+
+    <a href="/dashboard" class="btn">Go to Dashboard</a>
+    <br><br>
+    <a href="/view_pass" class="btn secondary">View My Pass</a>
+</div>
+
+</body>
+</html>
