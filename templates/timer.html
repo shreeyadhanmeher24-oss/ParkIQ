@@ -5,49 +5,99 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Parking Timer - ParkIQ</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+}
+
+.timer-card {
+    background: white;
+    color: #111;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    width: 350px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+
+#countdown {
+    font-size: 40px;
+    font-weight: bold;
+    margin: 20px 0;
+    color: #22c55e;
+}
+
+.home-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+}
+
+.home-btn:hover {
+    background: #1d4ed8;
+}
+</style>
+
 </head>
 <body>
 
-<div class="search-container">
-    <h1>Parking Active</h1>
+<div class="timer-card">
+    <h2>🚗 Parking Active</h2>
+    <p>Your parking session is running</p>
 
-    <div class="timer-card">
-        <h2>Your Parking Timer</h2>
-        <h1 id="countdown">{{ seconds }}</h1>
-        <p>Your vehicle is safely parked.</p>
+    <h1 id="countdown"></h1>
 
-        <br>
+    <p>Your vehicle is safely parked.</p>
 
-        <!-- Back Home Button -->
-        <a href="/">
-            <button class="home-btn">Back Home</button>
-        </a>
-    </div>
+    <br>
+
+    <a href="/">
+        <button class="home-btn">Back Home</button>
+    </a>
 </div>
 
 <script>
-let timeLeft = Number("{{ seconds }}");
+let totalSeconds = Number("{{ seconds }}");   // ✅ clean (no quotes)
 
-function updateTimer() {
-    let minutes = Math.floor(timeLeft / 60);
-    let seconds = timeLeft % 60;
-
-    document.getElementById("countdown").innerText =
-        minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-
-    if(timeLeft <= 0){
-        fetch("/send_expiry_sms");
-
-        alert("Your parking time is over. Please extend parking.");
-        window.location.href = "/extend_payment";
-        return;
-    }
-
-    timeLeft--;
+// ✅ SMS trigger
+if (totalSeconds > 10) {
+    setTimeout(() => {
+        fetch('/send_expiry_sms')
+        .then(() => console.log("SMS Triggered"));
+    }, (totalSeconds - 10) * 1000);
 }
 
-setInterval(updateTimer, 1000);
-updateTimer();
+// ✅ timer element
+let timerDisplay = document.getElementById("countdown");
+
+// ⏱ countdown
+let interval = setInterval(() => {
+    let mins = Math.floor(totalSeconds / 60);
+    let secs = totalSeconds % 60;
+
+    // format like 02m 05s
+    timerDisplay.innerText =
+        String(mins).padStart(2, '0') + "m " +
+        String(secs).padStart(2, '0') + "s";
+
+    totalSeconds--;
+
+    if (totalSeconds < 0) {
+        clearInterval(interval);
+        timerDisplay.innerText = "⏰ Time Expired";
+    }
+}, 1000);
 </script>
 
 </body>

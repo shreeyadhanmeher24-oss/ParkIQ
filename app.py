@@ -236,6 +236,7 @@ def booking_form():
 
 
 # ---------------- CONFIRM BOOKING ----------------
+
 from datetime import datetime
 import random
 
@@ -243,12 +244,12 @@ import random
 def confirm_booking():
     vehicle_number = request.form["vehicle_number"]
     vehicle_type = request.form["vehicle_type"]
-    duration = request.form["duration"]
+    duration = int(request.form["duration"])   # ✅ integer (no demo)
     price = int(request.form["price"])
 
     username = session.get("username")
 
-    # SAVE SESSION
+    # ✅ SAVE SESSION
     session["vehicle_number"] = vehicle_number
     session["vehicle_type"] = vehicle_type
     session["duration"] = duration
@@ -257,7 +258,7 @@ def confirm_booking():
     conn = sqlite3.connect("parking.db")
     cursor = conn.cursor()
 
-    # 🔍 CHECK PASS
+    # ✅ CHECK PASS
     cursor.execute("SELECT pass_expiry, wallet FROM users WHERE username=?", (username,))
     result = cursor.fetchone()
 
@@ -265,11 +266,10 @@ def confirm_booking():
         try:
             expiry_date = datetime.strptime(result[0], "%Y-%m-%d")
 
-            # ✅ PASS USER
+            # ✅ ACTIVE PASS
             if expiry_date >= datetime.now():
-                wallet = result[1]
+                wallet = result[1] or 0   # ✅ safe
 
-                # 💰 CHECK WALLET
                 if wallet >= price:
                     new_balance = wallet - price
 
@@ -288,12 +288,12 @@ def confirm_booking():
                     conn.close()
                     return "❌ Not enough balance in wallet"
 
-        except:
-            pass
+        except Exception as e:
+            print("Error in pass check:", e)   # ✅ DEBUG (important)
 
     conn.close()
 
-    # ❌ NON-PASS USER → RAZORPAY
+    # ❌ NORMAL USER → RAZORPAY
     return redirect("/payment")
 
 
@@ -357,11 +357,11 @@ def success():
 @app.route("/timer")
 def timer():
     duration_units = int(session.get("duration", 1))
-    seconds = duration_units * 30 * 60
+
+    # 30 min = 1800 sec
+    seconds = int(duration_units * 30 * 60)
+
     return render_template("timer.html", seconds=seconds)
-
-
-
 # ---------------- DOWNLOAD RECEIPT ----------------
 @app.route("/download_receipt/<payment_id>")
 def download_receipt(payment_id):
