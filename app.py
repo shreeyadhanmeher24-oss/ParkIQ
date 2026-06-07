@@ -171,9 +171,12 @@ def search_location():
 
 
 # ---------------- AREA SLOT DISPLAY ----------------
+
+   # ---------------- AREA SLOT DISPLAY ----------------
 @app.route("/area_slots")
 def area_slots():
-    location = request.args.get("location")
+    source = request.args.get("source")
+    destination = request.args.get("destination")
 
     total_slots = random.randint(10, 30)
     available = random.randint(3, total_slots)
@@ -183,7 +186,6 @@ def area_slots():
 
     # AI Prediction Logic
     if 17 <= current_hour <= 21:
-        # Peak evening traffic
         if available <= 5:
             prediction = "High demand expected. Slots may fill soon."
         else:
@@ -195,14 +197,14 @@ def area_slots():
             prediction = "Limited slots likely. Recommended to book now."
 
     return render_template(
-        "area_slots.html",
-        area=location,
-        total=total_slots,
-        available=available,
-        occupied=occupied,
-        prediction=prediction
-    )
-
+    "area_slots.html",
+    source=source,
+    destination=destination,
+    total=total_slots,
+    available=available,
+    occupied=occupied,
+    prediction=prediction
+)
 # ---------------- BOOK SLOT ----------------
 @app.route("/book/<int:id>")
 def book_slot(id):
@@ -332,25 +334,30 @@ def success():
     conn = sqlite3.connect("parking.db")
     cursor = conn.cursor()
 
+    # ✅ REAL-TIME DATE & TIME
+    from datetime import datetime
+    now = datetime.now()
+    date = now.strftime("%d %B %Y")
+    time = now.strftime("%I:%M %p")
+
     cursor.execute(
-    "INSERT INTO bookings (username, slot_number, payment_id, date, time) VALUES (?, ?, ?, ?, ?)",
-    (
-        session.get("username"),
-        session.get("booked_slot"),
-        payment_id,
-        session.get("date"),
-        session.get("time")
+        "INSERT INTO bookings (username, slot_number, payment_id, date, time) VALUES (?, ?, ?, ?, ?)",
+        (
+            username,
+            slot_number,
+            payment_id,
+            date,
+            time
+        )
     )
-)
 
     conn.commit()
     conn.close()
 
-    # Save payment id for receipt + timer flow
     session["last_payment_id"] = payment_id
 
-    # SHOW SUCCESS PAGE FIRST (not timer directly)
     return render_template("success.html", payment_id=payment_id)
+
 
 
 # ---------------- TIMER PAGE ----------------
@@ -368,6 +375,11 @@ def download_receipt(payment_id):
     buffer = io.BytesIO()
     p = canvas.Canvas(buffer)
 
+    from datetime import datetime
+    now = datetime.now()
+    current_date = now.strftime("%d %B %Y")
+    current_time = now.strftime("%I:%M %p")
+
     p.setFont("Helvetica-Bold", 18)
     p.drawString(180, 800, "ParkIQ Payment Receipt")
 
@@ -377,9 +389,9 @@ def download_receipt(payment_id):
     p.drawString(100, 680, f"Vehicle Number: {session.get('vehicle_number','-')}")
     p.drawString(100, 650, f"Vehicle Type: {session.get('vehicle_type','-')}-Wheeler")
 
-    # ✅ NEW: DATE & TIME (AUTO)
-    p.drawString(100, 620, f"Date: {session.get('date','-')}")
-    p.drawString(100, 590, f"Time: {session.get('time','-')}")
+    # ✅ FIXED REAL-TIME DATE & TIME
+    p.drawString(100, 620, f"Date: {current_date}")
+    p.drawString(100, 590, f"Time: {current_time}")
 
     p.drawString(100, 560, f"Duration: {session.get('duration','-')}")
     p.drawString(100, 530, "Parking Slot Booking Confirmed")
@@ -395,8 +407,6 @@ def download_receipt(payment_id):
         download_name=f"receipt_{payment_id}.pdf",
         mimetype="application/pdf"
     )
-
-    
 
 # ---------------- BOOKING HISTORY ----------------
 @app.route("/history")
@@ -679,4 +689,5 @@ def view_pass():
 
 # ---------------- RUN APP ----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

@@ -6,16 +6,22 @@
 <title>Area Slots - ParkIQ</title>
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+<!-- Routing -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
 <style>
 #map {
-height: 500px;
-width: 100%;
-margin-top: 30px;
-border-radius: 20px;
-overflow: hidden;
+    height: 500px;
+    width: 100%;
+    margin-top: 30px;
+    border-radius: 20px;
+    overflow: hidden;
 }
 </style>
 </head>
@@ -23,79 +29,172 @@ overflow: hidden;
 <body>
 
 <div class="search-container">
-    <h1>{{ area }}</h1>
 
-    <p>Total Slots: {{ total }}</p>
-    <p>Available Slots: {{ available }}</p>
-    <p>Occupied Slots: {{ occupied }}</p>
+<h2 class="route-text">
+    Route: {{ source }} → {{ destination }}
+</h2>
 
-    <div class="prediction-box">
-        AI Prediction: {{ prediction }}
-    </div>
+<p>Total Slots: {{ total }}</p>
+<p>Available Slots: {{ available }}</p>
+<p>Occupied Slots: {{ occupied }}</p>
 
-    <div id="map"></div>
+<div class="prediction-box">
+    AI Prediction: {{ prediction }}
+</div>
 
-    <br>
+<div id="map"></div>
 
-    {% if available > 0 %}
-        <a href="/book/1">
-            <button>Book Now</button>
-        </a>
-    {% else %}
-        <button disabled>No Slots Available</button>
-    {% endif %}
+<br>
 
-    <br><br>
+<button onclick="bookNow()">Book Now</button>
 
-    <a href="/search_location">
-        <button>Back</button>
-    </a>
+<br><br>
+
+<a href="/search_location">
+    <button>Back</button>
+</a>
+
 </div>
 
 <script>
 window.onload = function () {
 
-    var map = L.map('map');
-
-    // Default Mumbai view
-    map.setView([19.0760, 72.8777], 13);
+    var map = L.map('map').setView([19.0760, 72.8777], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Parking location marker
-    var parkingLat = 19.0760;
-    var parkingLon = 72.8777;
+    let source = "{{ source }}";
+    let destination = "{{ destination }}";
+    let availableSlots = {{ available }};
 
-    L.marker([parkingLat, parkingLon]).addTo(map)
-        .bindPopup("Parking Available Here")
-        .openPopup();
+    let routingControl = null;
 
-    // User GPS location
-    navigator.geolocation.getCurrentPosition(function(position) {
+    async function getCoords(place) {
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`);
+        let data = await res.json();
 
-        let userLat = position.coords.latitude;
-        let userLon = position.coords.longitude;
+        if (!data || data.length === 0) return null;
 
-        L.marker([userLat, userLon]).addTo(map)
-            .bindPopup("You are here")
-            .openPopup();
+        return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    }
 
-        map.setView([userLat, userLon], 14);
+    function drawRoute(sourceCoords, destCoords) {
 
-        // redraw properly
-        setTimeout(function () {
-            map.invalidateSize();
-        }, 500);
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
 
-    });
+        routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(sourceCoords[0], sourceCoords[1]),
+                L.latLng(destCoords[0], destCoords[1])
+            ],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            lineOptions: {
+                styles: [{
+                    color: '#006400',
+                    weight: 6,
+                    opacity: 0.95
+                }]
+            }
+        }).addTo(map);
+    }
 
-    // backup redraw
-    setTimeout(function () {
-        map.invalidateSize();
-    }, 1000);
+    function generateParkingSpots(center) {
+        let spots = [];
+
+        for (let i = 0; i < 5; i++) {
+            let lat = center[0] + (Math.random() - 0.5) * 0.01;
+            let lon = center[1] + (Math.random() - 0.5) * 0.01;
+            spots.push([lat, lon]);
+        }
+
+        return spots;
+    }
+
+    async function loadMap() {
+        try {
+
+            // ✅ IF USER ENTERED SOURCE & DESTINATION
+            if (source && destination && source !== "None" && destination !== "None") {
+
+                let sourceCoords = await getCoords(source);
+                let destCoords = await getCoords(destination);
+
+                if (!sourceCoords || !destCoords) {
+                    throw "Location not found";
+                }
+
+                map.setView(sourceCoords, 13);
+
+                // SOURCE
+                L.marker(sourceCoords).addTo(map).bindPopup("Source").openPopup();
+
+                // DESTINATION
+                L.marker(destCoords).addTo(map).bindPopup("Destination");
+
+                // ROUTE
+                drawRoute(sourceCoords, destCoords);
+
+                // 🟢 MULTIPLE PARKING OPTIONS
+                let parkings = generateParkingSpots(destCoords);
+
+                parkings.forEach((coords, index) => {
+                    let marker = L.marker(coords).addTo(map);
+
+                    marker.bindPopup(
+                        "Parking " + (index + 1) + "<br>Available Slots: " + availableSlots
+                    );
+
+                    marker.on("click", function () {
+                        drawRoute(sourceCoords, coords);
+                        localStorage.setItem("selectedParking", JSON.stringify(coords));
+                    });
+                });
+
+            }
+
+            // 🔵 FALLBACK GPS
+            else {
+                navigator.geolocation.getCurrentPosition(function(position) {
+
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+
+                    map.setView([lat, lon], 14);
+
+                    L.marker([lat, lon]).addTo(map)
+                        .bindPopup("Your Location")
+                        .openPopup();
+                });
+            }
+
+        } catch (err) {
+            alert("Location not found");
+            console.log(err);
+        }
+    }
+
+    loadMap();
+
+    setTimeout(() => map.invalidateSize(), 1000);
 };
+
+// BOOK FUNCTION
+function bookNow() {
+    let selected = localStorage.getItem("selectedParking");
+
+    if (!selected) {
+        alert("Please select a parking spot on map");
+        return;
+    }
+
+    window.location.href = "/book/1";
+}
 </script>
 
 </body>

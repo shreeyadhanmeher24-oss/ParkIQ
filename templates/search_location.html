@@ -9,90 +9,122 @@
 <body>
 
 <div class="search-container">
-    <h1>Find Parking Near You</h1>
+    <h1>Find Parking</h1>
 
+    <!-- SOURCE -->
     <div class="autocomplete-box">
-        <input type="text" id="locationInput" placeholder="Enter Area Name">
-        <div id="suggestions"></div>
+        <input type="text" id="sourceInput" placeholder="Enter Source Location">
+        <div id="sourceSuggestions"></div>
     </div>
 
     <br>
 
-    <button onclick="searchSelectedLocation()">Search Parking</button>
+    <!-- DESTINATION -->
+    <div class="autocomplete-box">
+        <input type="text" id="destinationInput" placeholder="Enter Destination">
+        <div id="destinationSuggestions"></div>
+    </div>
+
+    <br>
+
+    <button onclick="searchRoute()">Search Parking</button>
 
     <br><br>
 
-    <button onclick="getLocation()">Use My GPS Location</button>
+    <button onclick="useGPS()">Use My Current Location</button>
 </div>
 
 <script>
-let selectedLocation = "";
+let sourceSelected = "";
+let destSelected = "";
 
-// LIVE SEARCH AUTOCOMPLETE
-document.getElementById("locationInput").addEventListener("input", function() {
-    let query = this.value.trim();
+// AUTOCOMPLETE FUNCTION
+function setupAutocomplete(inputId, suggestionId) {
+    document.getElementById(inputId).addEventListener("input", function () {
+        let query = this.value.trim();
 
-    if(query.length < 2) {
-        document.getElementById("suggestions").innerHTML = "";
-        return;
-    }
+        if (query.length < 2) {
+            document.getElementById(suggestionId).innerHTML = "";
+            return;
+        }
 
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
-    .then(response => response.json())
-    .then(data => {
-        let suggestionsHTML = "";
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(data => {
+            let html = "";
 
-        data.slice(0,5).forEach(place => {
-            suggestionsHTML += `
-                <div class="suggestion-item" onclick="selectLocation('${place.display_name.replace(/'/g, "\\'")}')">
-                    ${place.display_name}
-                </div>
-            `;
+            data.slice(0,5).forEach(place => {
+                html += `
+                    <div class="suggestion-item"
+                        onclick="selectLocation('${inputId}', '${suggestionId}', '${place.display_name.replace(/'/g, "\\'")}')">
+                        ${place.display_name}
+                    </div>
+                `;
+            });
+
+            document.getElementById(suggestionId).innerHTML = html;
         });
-
-        document.getElementById("suggestions").innerHTML = suggestionsHTML;
-    })
-    .catch(error => {
-        console.log("Search error:", error);
     });
-});
+}
 
 // SELECT LOCATION
-function selectLocation(location) {
-    selectedLocation = location;
-    document.getElementById("locationInput").value = location;
-    document.getElementById("suggestions").innerHTML = "";
+function selectLocation(inputId, suggestionId, value) {
+    document.getElementById(inputId).value = value;
+    document.getElementById(suggestionId).innerHTML = "";
+
+    if(inputId === "sourceInput"){
+        sourceSelected = value;
+        localStorage.setItem("source", value);
+        localStorage.setItem("useGPS", "false");  // ❌ disable GPS
+    } else {
+        destSelected = value;
+        localStorage.setItem("destination", value);
+    }
 }
 
-// SEARCH BUTTON
-function searchSelectedLocation() {
-    let inputValue = document.getElementById("locationInput").value.trim();
+// SEARCH
+function searchRoute() {
+    let source = document.getElementById("sourceInput").value.trim();
+    let destination = document.getElementById("destinationInput").value.trim();
 
-    if(inputValue === "") {
-        alert("Please enter a location.");
+    if (source === "" || destination === "") {
+        alert("Please enter both source and destination");
         return;
     }
 
-    window.location.href = "/area_slots?location=" + encodeURIComponent(inputValue);
+    // store for next page
+    localStorage.setItem("source", source);
+    localStorage.setItem("destination", destination);
+    localStorage.setItem("useGPS", "false");
+
+    window.location.href =
+        "/area_slots?source=" + encodeURIComponent(source) +
+        "&destination=" + encodeURIComponent(destination);
 }
 
-// GPS LOCATION
-function getLocation() {
-    navigator.geolocation.getCurrentPosition(function(position) {
+// GPS
+function useGPS() {
+    navigator.geolocation.getCurrentPosition(function (position) {
+
+        localStorage.setItem("useGPS", "true");  // ✅ enable GPS
+
         let lat = position.coords.latitude;
         let lon = position.coords.longitude;
 
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-            selectedLocation = data.display_name;
-            document.getElementById("locationInput").value = selectedLocation;
-        })
-        .catch(error => {
-            console.log("GPS error:", error);
+            document.getElementById("sourceInput").value = data.display_name;
+
+            localStorage.setItem("source", data.display_name);
         });
     });
 }
+
+// INIT AUTOCOMPLETE
+setupAutocomplete("sourceInput", "sourceSuggestions");
+setupAutocomplete("destinationInput", "destinationSuggestions");
+
 </script>
 
 </body>
