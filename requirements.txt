@@ -2,3 +2,4 @@ flask
 razorpay
 reportlab
 requests
+gunicorn
